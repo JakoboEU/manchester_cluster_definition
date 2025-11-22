@@ -15,14 +15,11 @@ class ClusterService {
         return plotsIndexedByCluster.keys.map { clusterId ->
             val plotsInCluster = plotsIndexedByCluster[clusterId]?.toSet()
             val habitatDataInCluster = habitatData.filter { plotsInCluster?.contains(it.identity) == true  }
-            Cluster(clusterId, plotsInCluster!!, mapOf(
-                HabitatStat.NDVI to Stats.from(habitatDataInCluster.map { it.habitat.ndvi }),
-                HabitatStat.HABITAT_COMPLEXITY to Stats.from(habitatDataInCluster.map { it.habitat.habitatComplexity }),
-                HabitatStat.HERB_COVER to Stats.from(habitatDataInCluster.map { it.habitat.herbaceousCover }),
-                HabitatStat.SHRUB_COVER to Stats.from(habitatDataInCluster.map { it.habitat.shrubCover }),
-                HabitatStat.SMALL_TREE_COVER to Stats.from(habitatDataInCluster.map { it.habitat.smallTreeCover }),
-                HabitatStat.LARGE_TREE_COVER to Stats.from(habitatDataInCluster.map { it.habitat.largeTreeCover }),
-            ))
+            val clusterStats = HabitatStat.entries.associateBy(keySelector = {it}, valueTransform = {
+                stat -> Stats.from(habitatDataInCluster.map { habitatData -> stat.statTransfrom(habitatData.habitat) })
+            })
+
+            Cluster(clusterId, plotsInCluster!!, clusterStats)
         }
     }
 }
