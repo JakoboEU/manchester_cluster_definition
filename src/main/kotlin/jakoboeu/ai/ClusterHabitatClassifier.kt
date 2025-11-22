@@ -27,7 +27,7 @@ data class ClusterDefinition(
 
 data class ClusterDefinitions(val definitions: List<ClusterDefinition>)
 
-fun clusterDefinitionSchema(): String {
+fun namedClusterSchema(): String {
     val mapper = jacksonObjectMapper()
         .registerModule(
             KotlinModule.Builder().build()
@@ -73,7 +73,7 @@ class ClusterHabitatClassifier(
             OUTPUT FORMAT
             --------------
             The response must match this JSON schema:
-            ${clusterDefinitionSchema()}
+            ${namedClusterSchema()}
             
             NAMING GUIDELINES
             ------------------
