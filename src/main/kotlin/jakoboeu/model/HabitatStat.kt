@@ -7,4 +7,5 @@ enum class HabitatStat(val statTransfrom: (Habitat) -> Double) {
     SHRUB_COVER({it.shrubCover}),
     SMALL_TREE_COVER({it.smallTreeCover}),
     LARGE_TREE_COVER({it.largeTreeCover}),
+    BUILT_COVER({1 - (it.herbaceousCover + it.shrubCover + it.smallTreeCover + it.largeTreeCover)})
 }
