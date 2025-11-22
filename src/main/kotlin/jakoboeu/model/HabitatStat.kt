@@ -1,11 +1,13 @@
 package jakoboeu.model
 
-enum class HabitatStat(val statTransfrom: (Habitat) -> Double) {
-    NDVI({it.ndvi}),
-    HABITAT_COMPLEXITY({it.habitatComplexity}),
-    HERB_COVER({it.herbaceousCover}),
-    SHRUB_COVER({it.shrubCover}),
-    SMALL_TREE_COVER({it.smallTreeCover}),
-    LARGE_TREE_COVER({it.largeTreeCover}),
-    BUILT_COVER({1 - (it.herbaceousCover + it.shrubCover + it.smallTreeCover + it.largeTreeCover)})
+import com.fasterxml.jackson.annotation.JsonValue
+
+enum class HabitatStat(@JsonValue val value: String, val statTransfrom: (Habitat) -> Double) {
+    NDVI("ndvi", {it.ndvi}),
+    HABITAT_COMPLEXITY("habitat_complexity", {it.habitatComplexity}),
+    HERB_COVER("herb_cover", {it.herbaceousCover}),
+    SHRUB_COVER("shrub_cover", {it.shrubCover}),
+    SMALL_TREE_COVER("small_tree_cover", {it.smallTreeCover}),
+    LARGE_TREE_COVER("large_tree_cover", {it.largeTreeCover}),
+    BUILT_COVER("built_cover", {1 - (it.herbaceousCover + it.shrubCover + it.smallTreeCover + it.largeTreeCover)})
 }

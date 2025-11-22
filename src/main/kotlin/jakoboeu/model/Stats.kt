@@ -1,5 +1,7 @@
 package jakoboeu.model
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonProperty
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 import kotlin.math.pow
 import kotlin.math.round
@@ -7,12 +9,19 @@ import kotlin.math.round
 const val NUMBER_OF_DECIMALS = 3
 
 data class Stats(
+    @param:JsonProperty("mean")
     val mean: Double,
+    @param:JsonProperty("median")
     val median: Double,
+    @param:JsonProperty("mode")
     val mode: Double,
+    @param:JsonProperty("standard deviation")
     val sd: Double,
+    @param:JsonProperty("lower 0.25 quartile")
     val lowerIqr: Double,
+    @param:JsonProperty("upper 0.75 quartile")
     val higherIqr: Double,
+    @JsonIgnore
     val n: Int,
 ) {
     companion object {

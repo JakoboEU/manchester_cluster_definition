@@ -1,5 +1,6 @@
 package jakoboeu
 
+import jakoboeu.ai.ClusterHabitatClassifier
 import jakoboeu.data.ClusterRepository
 import jakoboeu.data.ImageVisionRepository
 import jakoboeu.data.PlotHabitatRepository
@@ -49,6 +50,7 @@ class Worker(
     val clusterRepository: ClusterRepository,
     imageVisionRepository: ImageVisionRepository,
     val clusterService: ClusterService,
+    val clusterHabitatClassifier: ClusterHabitatClassifier,
 ) {
     val imageVisionData = imageVisionRepository.loadImageVision("./image_classification.json")
 
@@ -60,6 +62,11 @@ class Worker(
         println("Read ${clusterAssignmentData.size} cluster definitions")
         println("Read ${imageVisionData.size} image vision definitions")
 
-        println(clusterService.createClusterData(plotsHabitatData, clusterAssignmentData))
+        val clusters = clusterService.createClusterData(plotsHabitatData, clusterAssignmentData)
+        val clusterDefinitions = clusterHabitatClassifier.classifyClusters(clusters)
+
+        clusterDefinitions.forEach {
+            println(it)
+        }
     }
 }
