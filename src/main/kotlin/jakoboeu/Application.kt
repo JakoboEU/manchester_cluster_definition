@@ -3,6 +3,7 @@ package jakoboeu
 import jakoboeu.data.ClusterRepository
 import jakoboeu.data.ImageVisionRepository
 import jakoboeu.data.PlotHabitatRepository
+import jakoboeu.service.ClusterService
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.WebApplicationType
@@ -18,7 +19,15 @@ const val K_CHOICE = 9
 class Application {
     @Bean
     fun runner(worker: Worker) = ApplicationRunner {
-        worker.classifyClusters()
+        println("---------------------")
+        println("Insect/Plant Clusters")
+        println("---------------------")
+        worker.classifyClusters("./insect-plant-predictors.csv", "./insect-plant-clusters.csv")
+
+        println("-------------")
+        println("Bird Clusters")
+        println("-------------")
+        worker.classifyClusters("./bird-predictors.csv", "./bird-clusters.csv")
     }
 }
 
@@ -37,12 +46,20 @@ fun main(args: Array<String>) {
 @Service
 class Worker(
     val plotHabitatRepository: PlotHabitatRepository,
-    val imageVisionRepository: ImageVisionRepository,
     val clusterRepository: ClusterRepository,
+    imageVisionRepository: ImageVisionRepository,
+    val clusterService: ClusterService,
 ) {
-    fun classifyClusters() {
-        println("Read ${plotHabitatRepository.loadPlotsHabitatData("./insect-plant-predictors.csv").size} habitat plots")
-        println("Read ${clusterRepository.loadClusters("./insect-plant-clusters.csv", K_CHOICE).size} cluster definitions")
-        println("Read ${imageVisionRepository.loadImageVision("./image_classification.json").size} image vision definitions")
+    val imageVisionData = imageVisionRepository.loadImageVision("./image_classification.json")
+
+    fun classifyClusters(predictorFilename: String, clusterFilename: String) {
+        val plotsHabitatData = plotHabitatRepository.loadPlotsHabitatData(predictorFilename)
+        val clusterAssignmentData = clusterRepository.loadClusters(clusterFilename, K_CHOICE)
+
+        println("Read ${plotsHabitatData.size} habitat plots")
+        println("Read ${clusterAssignmentData.size} cluster definitions")
+        println("Read ${imageVisionData.size} image vision definitions")
+
+        println(clusterService.createClusterData(plotsHabitatData, clusterAssignmentData))
     }
 }

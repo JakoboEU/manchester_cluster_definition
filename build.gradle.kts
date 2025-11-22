@@ -41,6 +41,8 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-jsonSchema")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
+    implementation("org.apache.commons:commons-math3:3.6.1")
+
     testImplementation(kotlin("test"))
 }
 
