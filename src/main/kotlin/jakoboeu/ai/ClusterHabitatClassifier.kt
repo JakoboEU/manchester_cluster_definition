@@ -1,17 +1,29 @@
 package jakoboeu.ai
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.jsonSchema.JsonSchema
 import com.fasterxml.jackson.module.jsonSchema.factories.SchemaFactoryWrapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import jakoboeu.model.Cluster
-import jakoboeu.model.ClusterDefinition
 import jakoboeu.model.HabitatStat
+import jakoboeu.model.NamedCluster
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.stereotype.Component
+
+data class ClusterDefinition(
+    @param:JsonProperty("cluster_id")
+    val clusterId: Int,
+    @param:JsonProperty("cluster_name")
+    val clusterName: String,
+    @param:JsonProperty("cluster_description")
+    val clusterDescription: String,
+    @param:JsonProperty("short_notes")
+    val shortNotes: String,
+)
 
 data class ClusterDefinitions(val definitions: List<ClusterDefinition>)
 
@@ -35,7 +47,7 @@ class ClusterHabitatClassifier(
 
     private val chat = ChatClient.create(this.chatModel)
 
-    fun classifyClusters(clusters: List<Cluster>) : List<ClusterDefinition> {
+    fun classifyClusters(clusters: List<Cluster>) : List<NamedCluster> {
         val prompt = """
             You are an urban ecology and remote-sensing expert.
 
@@ -103,7 +115,15 @@ class ClusterHabitatClassifier(
         require(result.definitions.size == clusters.size) {
             "Classification result size ${result.definitions.size} does not match input size ${clusters.size}"
         }
+        require(result.definitions.map { it.clusterId } == clusters.map { it.clusterId }) {
+            "Classification result ${result.definitions.map { it.clusterId }} does not contain the same cluster IDs as the input ${clusters.map { it.clusterId }}"
+        }
 
-        return result.definitions;
+        val indexedClusters = clusters.associateBy { it.clusterId }
+        return result.definitions.map {
+            println("Notes on ${it.clusterId}: ${it.shortNotes}")
+            val cluster = indexedClusters[it.clusterId]!!
+            NamedCluster(it.clusterId, it.clusterName, it.clusterDescription, cluster.plots)
+        }
     }
 }
