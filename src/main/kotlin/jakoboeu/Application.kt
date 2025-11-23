@@ -71,9 +71,16 @@ class Worker(
         println("Read ${imageVisionData.size} image vision definitions")
 
         val clusters = clusterService.createClusterData(plotsHabitatData, clusterAssignmentData)
-        val clusterDefinitions = clusterHabitatClassifier.classifyClusters(clusters).map {
+
+        val namedClusters = if(previouslyDescribedClusters.isEmpty())
+            clusterHabitatClassifier.classifyClusters(clusters)
+        else
+            clusterHabitatClassifier.classifyClusters(clusters, previouslyDescribedClusters)
+
+        val clusterDefinitions = namedClusters.map {
             clusterImageSelector.selectAndDescribeImages(it, imageVisionData)
         }
+
         save(outputFilename, clusterDefinitions)
         return clusterDefinitions
     }
