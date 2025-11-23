@@ -59,7 +59,7 @@ class ClusterImageSelector(
                 a) use only information that is provided, do not guess from the vegetation type description.
                 b) should be written in a format suitable for an academic journal. 
                 c) the description should refer to plots rather than images or scenes.
-                d) the description should focus on visible habitat.
+                d) the description should only include visible habitat rather than clutter or objects in the images
            
             Output Format:
             --------------

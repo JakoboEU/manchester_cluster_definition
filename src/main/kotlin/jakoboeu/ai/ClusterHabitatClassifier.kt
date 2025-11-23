@@ -47,7 +47,17 @@ class ClusterHabitatClassifier(
 
     private val chat = ChatClient.create(this.chatModel)
 
-    fun classifyClusters(clusters: List<Cluster>) : List<NamedCluster> {
+    fun classifyClusters(clusters: List<Cluster>) : List<NamedCluster> =
+        classifyClusters(clusters, "")
+
+    fun classifyClusters(clusters: List<Cluster>, previouslyNamedClusters: List<NamedCluster>) : List<NamedCluster> =
+        classifyClusters(clusters, """
+            - Reuse the following NAMES for clusters provided the descriptions match:
+                ${previouslyNamedClusters.joinToString("\n") { "* \"${it.clusterName}\": ${it.clusterDescription}" }}
+        
+        """.trimIndent())
+
+    private fun classifyClusters(clusters: List<Cluster>, additionalNamingGuidelines: String) : List<NamedCluster> {
         val prompt = """
             You are an urban ecology and remote-sensing expert.
 
@@ -83,7 +93,7 @@ class ClusterHabitatClassifier(
             - Only use such terms when they match the statistics.
             - If a cluster is ambiguous, still propose the BEST-FIT name, but state briefly why it is ambiguous in the short-notes field.
             - Do NOT invent extra clusters; use only the cluster IDs I provide.
-            
+            $additionalNamingGuidelines
             VARIABLES:
             ----------
             ${HabitatStat.NDVI.value}: The NDVI of the plot
