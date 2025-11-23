@@ -1,43 +1,29 @@
 package jakoboeu.ai
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.jsonSchema.JsonSchema
-import com.fasterxml.jackson.module.jsonSchema.factories.SchemaFactoryWrapper
-import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import jakoboeu.model.Cluster
+import jakoboeu.model.DescribedCluster
 import jakoboeu.model.HabitatStat
 import jakoboeu.model.NamedCluster
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.model.ChatModel
+import org.springframework.ai.converter.BeanOutputConverter
 import org.springframework.ai.openai.OpenAiChatOptions
+import org.springframework.ai.openai.api.ResponseFormat
 import org.springframework.stereotype.Component
 
 data class ClusterDefinition(
-    @param:JsonProperty("cluster_id")
     val clusterId: Int,
-    @param:JsonProperty("cluster_name")
     val clusterName: String,
-    @param:JsonProperty("cluster_description")
     val clusterDescription: String,
-    @param:JsonProperty("short_notes")
     val shortNotes: String,
 )
 
 data class ClusterDefinitions(val definitions: List<ClusterDefinition>)
 
 fun namedClusterSchema(): String {
-    val mapper = jacksonObjectMapper()
-        .registerModule(
-            KotlinModule.Builder().build()
-        )
-
-    val visitor = SchemaFactoryWrapper()
-    mapper.acceptJsonFormatVisitor(ClusterDefinitions::class.java, visitor)
-    val schema: JsonSchema = visitor.finalSchema()
-    schema.id = "urn:cluster-definition:v1"
-    return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(schema)
+    val converter = BeanOutputConverter(ClusterDefinitions::class.java)
+    return converter.jsonSchema
 }
 
 @Component
@@ -50,7 +36,7 @@ class ClusterHabitatClassifier(
     fun classifyClusters(clusters: List<Cluster>) : List<NamedCluster> =
         classifyClusters(clusters, "")
 
-    fun classifyClusters(clusters: List<Cluster>, previouslyNamedClusters: List<NamedCluster>) : List<NamedCluster> =
+    fun classifyClusters(clusters: List<Cluster>, previouslyNamedClusters: List<DescribedCluster>) : List<NamedCluster> =
         classifyClusters(clusters, """
             - Reuse the following NAMES for clusters provided the descriptions match:
                 ${previouslyNamedClusters.joinToString("\n") { "* \"${it.clusterName}\": ${it.clusterDescription}" }}
@@ -79,12 +65,7 @@ class ClusterHabitatClassifier(
             5. The name for clusters must be unique, and allow clusters to be clearly, meaningfully, and uniquely identified.
             6. Provide a concise description suitable for a methods/results section in a scientific journal.
             7. Provide any notes about why a name and description was chosen, or how additional data might allow you to improve the naming.
-            
-            OUTPUT FORMAT
-            --------------
-            The response must match this JSON schema:
-            ${namedClusterSchema()}
-            
+
             NAMING GUIDELINES
             ------------------
             - Prefer concise, ecologically meaningful terms that are common in urban ecology / landscape ecology, such as:
@@ -112,8 +93,9 @@ class ClusterHabitatClassifier(
         val json = chat.prompt()
             .options(
                 OpenAiChatOptions.builder()
-                    .model("gpt-4.1-mini")
-                    .temperature(0.0)
+                    .model("gpt-5-mini")
+                    .responseFormat(ResponseFormat(ResponseFormat.Type.JSON_SCHEMA, namedClusterSchema()))
+                    .temperature(1.0)
                     .build())
             .user { u -> u.text(prompt) }
             .call()
@@ -125,7 +107,7 @@ class ClusterHabitatClassifier(
         require(result.definitions.size == clusters.size) {
             "Classification result size ${result.definitions.size} does not match input size ${clusters.size}"
         }
-        require(result.definitions.map { it.clusterId } == clusters.map { it.clusterId }) {
+        require(result.definitions.map { it.clusterId }.sorted() == clusters.map { it.clusterId }.sorted()) {
             "Classification result ${result.definitions.map { it.clusterId }} does not contain the same cluster IDs as the input ${clusters.map { it.clusterId }}"
         }
 

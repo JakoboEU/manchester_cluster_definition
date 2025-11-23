@@ -29,12 +29,12 @@ class Application {
         println("---------------------")
         println("Insect/Plant Clusters")
         println("---------------------")
-        worker.classifyClusters("./insect-plant-predictors.csv", "./insect-plant-clusters.csv", "insect-plant-clusters.json")
+        val insectPlantClusters = worker.classifyClusters("./insect-plant-predictors.csv", "./insect-plant-clusters.csv", "insect-plant-clusters.json")
 
         println("-------------")
         println("Bird Clusters")
         println("-------------")
-        worker.classifyClusters("./bird-predictors.csv", "./bird-clusters.csv", "bird-clusters.json")
+        worker.classifyClusters("./bird-predictors.csv", "./bird-clusters.csv", "bird-clusters.json", insectPlantClusters)
     }
 }
 
@@ -62,7 +62,7 @@ class Worker(
 ) {
     val imageVisionData = imageVisionRepository.loadImageVision("./image_classification.json")
 
-    fun classifyClusters(predictorFilename: String, clusterFilename: String, outputFilename: String) {
+    fun classifyClusters(predictorFilename: String, clusterFilename: String, outputFilename: String, previouslyDescribedClusters: List<DescribedCluster> = listOf()): List<DescribedCluster> {
         val plotsHabitatData = plotHabitatRepository.loadPlotsHabitatData(predictorFilename)
         val clusterAssignmentData = clusterRepository.loadClusters(clusterFilename, K_CHOICE)
 
@@ -75,6 +75,7 @@ class Worker(
             clusterImageSelector.selectAndDescribeImages(it, imageVisionData)
         }
         save(outputFilename, clusterDefinitions)
+        return clusterDefinitions
     }
 
     fun save(outputFilename: String, output: List<DescribedCluster>) {

@@ -1,38 +1,24 @@
 package jakoboeu.ai
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.jsonSchema.JsonSchema
-import com.fasterxml.jackson.module.jsonSchema.factories.SchemaFactoryWrapper
-import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import jakoboeu.model.DescribedCluster
 import jakoboeu.model.ImageVision
 import jakoboeu.model.NamedCluster
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.model.ChatModel
+import org.springframework.ai.converter.BeanOutputConverter
 import org.springframework.ai.openai.OpenAiChatOptions
+import org.springframework.ai.openai.api.ResponseFormat
 import org.springframework.stereotype.Component
 
-
 data class DescribedClusterResult(
-    @param:JsonProperty("habitat_description_from_photos")
     val habitatDescription: String,
-    @param:JsonProperty("representative_plot_image")
     val representativeImage: String,
 )
 
 fun describedClusterSchema(): String {
-    val mapper = jacksonObjectMapper()
-        .registerModule(
-            KotlinModule.Builder().build()
-        )
-
-    val visitor = SchemaFactoryWrapper()
-    mapper.acceptJsonFormatVisitor(DescribedClusterResult::class.java, visitor)
-    val schema: JsonSchema = visitor.finalSchema()
-    schema.id = "urn:described-cluster:v1"
-    return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(schema)
+    val converter = BeanOutputConverter(DescribedClusterResult::class.java)
+    return converter.jsonSchema
 }
 
 @Component
@@ -60,16 +46,6 @@ class ClusterImageSelector(
                 b) should be written in a format suitable for an academic journal. 
                 c) the description should refer to plots rather than images or scenes.
                 d) the description should only include visible habitat rather than clutter or objects in the images
-           
-            Output Format:
-            --------------
-            The JSON MUST strictly conform to the provided JSON Schema, including:
-              - property names
-              - required properties
-              - data types
-              
-            JSON schema:
-            ${describedClusterSchema()}
             
             Habitat Type:
             -------------
@@ -84,8 +60,9 @@ class ClusterImageSelector(
         val json = chat.prompt()
             .options(
                 OpenAiChatOptions.builder()
-                    .model("gpt-4.1-mini")
-                    .temperature(0.0)
+                    .model("gpt-5-mini")
+                    .responseFormat(ResponseFormat(ResponseFormat.Type.JSON_SCHEMA, describedClusterSchema()))
+                    .temperature(1.0)
                     .build())
             .user { u -> u.text(prompt) }
             .call()
