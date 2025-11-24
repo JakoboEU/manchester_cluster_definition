@@ -33,17 +33,22 @@ class ClusterHabitatClassifier(
 
     private val chat = ChatClient.create(this.chatModel)
 
-    fun classifyClusters(clusters: List<Cluster>) : List<NamedCluster> =
-        classifyClusters(clusters, "")
+    fun classifyClusters(clusters: List<Cluster>) : List<NamedCluster> {
+        val result = classifyClusters(clusters, "")
+        return toNamedClusters(clusters, result)
+    }
 
-    fun classifyClusters(clusters: List<Cluster>, previouslyNamedClusters: List<DescribedCluster>) : List<NamedCluster> =
-        classifyClusters(clusters, """
-            - Reuse the following NAMES for clusters provided the descriptions match:
+    fun classifyClusters(clusters: List<Cluster>, previouslyNamedClusters: List<DescribedCluster>) : List<NamedCluster> {
+        val result = classifyClusters(clusters, """
+            - Use the following NAMES for clusters provided the descriptions match the inferred habitat or vegetation structure:
                 ${previouslyNamedClusters.joinToString("\n") { "* \"${it.clusterName}\": ${it.clusterDescription}" }}
-        
+                
         """.trimIndent())
 
-    private fun classifyClusters(clusters: List<Cluster>, additionalNamingGuidelines: String) : List<NamedCluster> {
+        return toNamedClusters(clusters, result)
+    }
+
+    private fun classifyClusters(clusters: List<Cluster>, additionalNamingGuidelines: String) : ClusterDefinitions {
         val prompt = """
             You are an urban ecology and remote-sensing expert.
 
@@ -111,6 +116,13 @@ class ClusterHabitatClassifier(
             "Classification result ${result.definitions.map { it.clusterId }} does not contain the same cluster IDs as the input ${clusters.map { it.clusterId }}"
         }
 
+        return result
+    }
+
+    private fun toNamedClusters(
+        clusters: List<Cluster>,
+        result: ClusterDefinitions
+    ): List<NamedCluster> {
         val indexedClusters = clusters.associateBy { it.clusterId }
         return result.definitions.map {
             println("Notes on ${it.clusterId}: ${it.shortNotes}")
