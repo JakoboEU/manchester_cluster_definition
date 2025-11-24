@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 
 data class DescribedClusterResult(
     val habitatDescription: String,
-    val representativeImage: String,
+    val representativeImageTitle: String,
 )
 
 fun describedClusterSchema(): String {
@@ -71,10 +71,10 @@ class ClusterImageSelector(
         val strippedJson = json!!.substring(json.indexOf('{'))
         val result = objectMapper.readValue(strippedJson, DescribedClusterResult::class.java)
 
-        require(cluster.plots.contains(result.representativeImage)) {
-            "The selected representative image (${result.representativeImage} is not present in the cluster ${cluster.plots}"
+        require(cluster.plots.contains(result.representativeImageTitle)) {
+            "The selected representative image (${result.representativeImageTitle} is not present in the cluster ${cluster.plots}"
         }
 
-        return DescribedCluster(cluster.clusterId, cluster.clusterName, cluster.clusterDescription, result.habitatDescription, result.representativeImage, cluster.plots)
+        return DescribedCluster(cluster.clusterId, cluster.clusterName, cluster.clusterDescription, result.habitatDescription, result.representativeImageTitle, cluster.plots)
     }
 }

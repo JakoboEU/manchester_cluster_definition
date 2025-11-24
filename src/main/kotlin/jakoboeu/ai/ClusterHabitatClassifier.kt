@@ -19,10 +19,25 @@ data class ClusterDefinition(
     val shortNotes: String,
 )
 
-data class ClusterDefinitions(val definitions: List<ClusterDefinition>)
+interface ClusterDef {
+    val definitions: List<ClusterDefinition>
+}
 
-fun namedClusterSchema(): String {
-    val converter = BeanOutputConverter(ClusterDefinitions::class.java)
+data class ClusterDefinitions(override val definitions: List<ClusterDefinition>) : ClusterDef
+
+data class UnusedClusterName(
+    val unusedClusterName: String,
+    val newClusterName: String,
+    val reason: String
+)
+
+data class ClusterDefinitionsWithUnused(
+    override val definitions: List<ClusterDefinition>,
+    val unusedClusterNames: List<UnusedClusterName>,
+) : ClusterDef
+
+fun <T : ClusterDef> namedClusterSchema(clusterDef: Class<T>): String {
+    val converter = BeanOutputConverter(clusterDef)
     return converter.jsonSchema
 }
 
@@ -34,7 +49,7 @@ class ClusterHabitatClassifier(
     private val chat = ChatClient.create(this.chatModel)
 
     fun classifyClusters(clusters: List<Cluster>) : List<NamedCluster> {
-        val result = classifyClusters(clusters, "")
+        val result = classifyClusters(clusters, "", ClusterDefinitions::class.java)
         return toNamedClusters(clusters, result)
     }
 
@@ -42,13 +57,17 @@ class ClusterHabitatClassifier(
         val result = classifyClusters(clusters, """
             - Use the following NAMES for clusters provided the descriptions match the inferred habitat or vegetation structure:
                 ${previouslyNamedClusters.joinToString("\n") { "* \"${it.clusterName}\": ${it.clusterDescription}" }}
-                
-        """.trimIndent())
+            - If none of the existing names fit, propose a new name as per the usual guidelines, and briefly explain why in the reason field.
+        """.trimIndent(), ClusterDefinitionsWithUnused::class.java)
+
+        println("Unused cluster names from previous classification:")
+        println("--------------------------------------------------")
+        result.unusedClusterNames.forEach { println(it) }
 
         return toNamedClusters(clusters, result)
     }
 
-    private fun classifyClusters(clusters: List<Cluster>, additionalNamingGuidelines: String) : ClusterDefinitions {
+    private fun <T : ClusterDef> classifyClusters(clusters: List<Cluster>, additionalNamingGuidelines: String, clusterDefClazz: Class<T>) : T {
         val prompt = """
             You are an urban ecology and remote-sensing expert.
 
@@ -99,7 +118,7 @@ class ClusterHabitatClassifier(
             .options(
                 OpenAiChatOptions.builder()
                     .model("gpt-5-mini")
-                    .responseFormat(ResponseFormat(ResponseFormat.Type.JSON_SCHEMA, namedClusterSchema()))
+                    .responseFormat(ResponseFormat(ResponseFormat.Type.JSON_SCHEMA, namedClusterSchema(clusterDefClazz)))
                     .temperature(1.0)
                     .build())
             .user { u -> u.text(prompt) }
@@ -107,7 +126,7 @@ class ClusterHabitatClassifier(
             .content()
 
         val strippedJson = json!!.substring(json.indexOf('{'))
-        val result = objectMapper.readValue(strippedJson, ClusterDefinitions::class.java)
+        val result = objectMapper.readValue(strippedJson, clusterDefClazz)
 
         require(result.definitions.size == clusters.size) {
             "Classification result size ${result.definitions.size} does not match input size ${clusters.size}"
@@ -121,7 +140,7 @@ class ClusterHabitatClassifier(
 
     private fun toNamedClusters(
         clusters: List<Cluster>,
-        result: ClusterDefinitions
+        result: ClusterDef
     ): List<NamedCluster> {
         val indexedClusters = clusters.associateBy { it.clusterId }
         return result.definitions.map {
